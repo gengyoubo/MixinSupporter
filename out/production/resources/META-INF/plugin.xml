@@ -1,0 +1,50 @@
+<idea-plugin>
+    <id>github.com.gengyoubo.mixincompletion</id>
+    <name>Mixin Code Completion</name>
+    <version>1.0.0</version>
+    <vendor email="gengyoubo@gmail.com" url="https://github.com/gengyoubo">gengyoubo</vendor>
+
+    <description>
+        <![CDATA[
+        <h2>Mixin Code Completion</h2>
+        <p>A powerful IntelliJ IDEA plugin that provides intelligent code completion for Mixin framework annotations.</p>
+
+        <h3>Features</h3>
+        <ul>
+            <li><b>Smart Code Completion</b> - Intelligent completion for Mixin annotations including @Inject, @Redirect, @ModifyArg, and @ModifyVariable</li>
+            <li><b>Target Method Completion</b> - Automatically suggests methods from the target class when writing @Inject(method = "...")</li>
+            <li><b>Annotation Quick Insertion</b> - Quickly insert commonly used Mixin annotations with proper imports</li>
+            <li><b>At Value Suggestions</b> - Smart completion for @At values like HEAD, TAIL, RETURN, INVOKE, etc.</li>
+        </ul>
+
+        <h3>Requirements</h3>
+        <ul>
+            <li>IntelliJ IDEA 2022.3.1 or higher</li>
+            <li>Java 17 or higher</li>
+        </ul>
+        ]]>
+    </description>
+
+    <change-notes>
+        <![CDATA[
+        <h3>1.0.0</h3>
+        <ul>
+            <li>Initial release</li>
+            <li>Mixin annotation completion support</li>
+        </ul>
+        ]]>
+    </change-notes>
+
+    <!-- 重要：声明依赖 -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor
+                language="JAVA"
+                implementationClass="github.com.gengyoubo.MixinAnnotationCompletionContributor"/>
+    </extensions>
+
+    <!-- 添加项目监听器，确保在 Java 项目中激活 -->
+
+</idea-plugin>

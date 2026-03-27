@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij.platform' version '2.13.1'
+}
+
+group = 'github.com.gengyoubo'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.6'
+    implementation 'org.ow2.asm:asm-util:9.6'
+
+    intellijPlatform {
+        intellijIdea '2026.1'
+        bundledPlugin 'com.intellij.java'  // 不是 'java'，而是 'com.intellij.java'
+    }
+}
+
+intellijPlatform {
+    // 注意：这里是 pluginConfiguration() 方法，有括号
+    pluginConfiguration() {
+        id = 'github.com.gengyoubo.mixin-supporter'
+        name = 'Mixin Supporter'
+        version = '1.0.0'
+        description = 'IntelliJ IDEA plugin for Mixin framework development with intelligent code completion.'
+        changeNotes = 'Initial release'
+
+        ideaVersion {
+            sinceBuild = '261'
+            untilBuild = '261.*'
+        }
+
+        vendor {
+            name = 'gengyoubo'
+            url = 'https://github.com/gengyoubo'
+        }
+    }
+
+    // 如果需要配置发布
+    publishing() {
+        token = System.getenv("PUBLISH_TOKEN")
+    }
+    // 插件验证
+    pluginVerification() {
+        ides {
+            recommended()
+        }
+    }
+
+}
+
+tasks.named('compileJava') {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.named('runIde') {
+    jvmArgs = ['-Xmx2048m', '--add-opens', 'java.base/java.lang=ALL-UNNAMED']
+}
+
+tasks.withType(org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask).configureEach {
+    enabled = false
+}
