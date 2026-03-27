@@ -7,30 +7,40 @@
     <description>
         <![CDATA[
         <h2>Mixin Code Completion</h2>
-        <p>A powerful IntelliJ IDEA plugin that provides intelligent code completion for Mixin framework annotations.</p>
-
-        <h3>Features</h3>
-        <ul>
-            <li><b>Smart Code Completion</b> - Intelligent completion for Mixin annotations including @Inject, @Redirect, @ModifyArg, and @ModifyVariable</li>
-            <li><b>Target Method Completion</b> - Automatically suggests methods from the target class when writing @Inject(method = "...")</li>
-            <li><b>Annotation Quick Insertion</b> - Quickly insert commonly used Mixin annotations with proper imports</li>
-            <li><b>At Value Suggestions</b> - Smart completion for @At values like HEAD, TAIL, RETURN, INVOKE, etc.</li>
-        </ul>
-
-        <h3>Requirements</h3>
-        <ul>
-            <li>IntelliJ IDEA 2022.3.1 or higher</li>
-            <li>Java 17 or higher</li>
-        </ul>
-        ]]>
+        <p> A powerful IntelliJ IDEA plugin that provides intelligent code completion for Mixin framework annotations.
+        <br/> 一个为 Mixin 框架提供智能代码补全的 IntelliJ IDEA 插件。
+        </p>
+        <h3>Features / 功能</h3>
+        <ul> <li>
+         <b>Smart Code Completion</b>
+          - Intelligent completion for Mixin annotations including @Inject, @Redirect, @ModifyArg, and @ModifyVariable <br/>
+          <b>智能代码补全</b>
+           - 支持 @Inject、@Redirect、@ModifyArg、@ModifyVariable 等 Mixin 注解补全
+           </li> <li>
+            <b>Target Method Completion</b>
+             - Automatically suggests methods from the target class when writing @Inject(method = "...")
+             <br/> <b>目标方法补全</b> - 在编写 @Inject(method = "...") 时自动补全目标类中的方法
+             </li> <li>
+             <b>Annotation Quick Insertion</b> -
+             Quickly insert commonly used Mixin annotations with proper imports <br/>
+             <b>注解快速插入</b> - 快速插入常用 Mixin 注解并自动添加 import
+             </li> <li>
+             <b>At Value Suggestions</b> - Smart completion for @At values like HEAD, TAIL, RETURN, INVOKE, etc.
+             <br/> <b>@At 参数补全</b> - 支持 HEAD、TAIL、RETURN、INVOKE 等 @At 值智能补全
+             </li> <li>
+             <b>INVOKE Target Completion</b> - Automatically generate Mixin INVOKE target descriptors
+             <br/> <b>INVOKE 目标补全</b> - 自动生成 INVOKE 字节码 target 描述符
+             </li> </ul> <h3>Requirements / 运行要求</h3>
+             <ul> <li>IntelliJ IDEA 2022.3.1 or higher / IntelliJ IDEA 2022.3.1 或更高版本
+             </li> <li>Java 17 or higher / Java 17 或更高版本</li> </ul> ]]>
     </description>
 
     <change-notes>
         <![CDATA[
         <h3>1.0.0</h3>
         <ul>
-            <li>Initial release</li>
             <li>Mixin annotation completion support</li>
+            <li>支持 Mixin 注解补全</li>
         </ul>
         ]]>
     </change-notes>

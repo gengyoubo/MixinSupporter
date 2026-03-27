@@ -14,7 +14,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
 
         extend(
                 CompletionType.BASIC,
-                PlatformPatterns.psiElement(),
+                PlatformPatterns.psiElement().afterLeaf("@"),
                 new CompletionProvider<>() {
 
                     @Override
@@ -91,7 +91,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                                             ctx.getStartOffset(),
                                             ctx.getTailOffset(),
                                             text + "(method = \"" + name + "\", " +
-                                                    "at = @At(value = \"+Type+\", shift = At.Shift.AFTER))"
+                                                    "at = @At(value = \""+Type+"\", shift = At.Shift.AFTER))"
                                     )
 
                             )
@@ -104,7 +104,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                                             ctx.getStartOffset(),
                                             ctx.getTailOffset(),
                                             text + "(method = \"" + name + "\", " +
-                                                    "at = @At(value = \"+Type+\", shift = At.Shift.BEFORE))"
+                                                    "at = @At(value = \""+Type+"\", shift = At.Shift.BEFORE))"
                                     )
 
                             )
@@ -117,7 +117,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                                             ctx.getStartOffset(),
                                             ctx.getTailOffset(),
                                             text + "(method = \"" + name + "\", " +
-                                                    "at = @At(value = \"+Type+\", shift = At.Shift.BY, by = 0))"
+                                                    "at = @At(value = \""+Type+"\", shift = At.Shift.BY, by = 0))"
                                     )
                             )
             );

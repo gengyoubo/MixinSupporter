@@ -29,8 +29,8 @@ public enum MixinType {
      * @return 对应的描述文本，如果未找到则返回 null
      */
     public static String getDescriptionByMixin(int value) {
-        for (ValueType type : ValueType.values()) {
-            if (type.getValue() == value) {
+        for (MixinType type : MixinType.values()) {
+            if (type.getMixin() == value) {
                 return type.getDescription();
             }
         }
