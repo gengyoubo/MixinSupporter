@@ -28,12 +28,13 @@ intellijPlatform {
     pluginConfiguration() {
         id = 'github.com.gengyoubo.mixin-supporter'
         name = 'Mixin Supporter'
-        version = '1.0.0'
-        description = 'IntelliJ IDEA plugin for Mixin framework development with intelligent code completion.'
-        changeNotes = 'Initial release'
+        version = '1.0.1'
+        description = 'IntelliJ IDEA plugin for Mixin framework development with intelligent code completion.<br>一款用于 Mixin 框架开发的 IntelliJ IDEA 插件，支持智能代码补全。'
+        changeNotes = '1.0.1:<br>1.0.1:'
+
 
         ideaVersion {
-            sinceBuild = '261'
+            sinceBuild = '182.7'
             untilBuild = '261.*'
         }
 
