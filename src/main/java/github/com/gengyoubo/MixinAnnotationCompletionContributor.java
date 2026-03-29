@@ -5,6 +5,7 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.*;
 import com.intellij.util.ProcessingContext;
+import github.com.gengyoubo.Compatible.CompatibleRepeat;
 import github.com.gengyoubo.Type.AtType;
 import github.com.gengyoubo.Type.MixinType;
 import github.com.gengyoubo.Type.ValueType;
@@ -12,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 public class MixinAnnotationCompletionContributor extends CompletionContributor {
+    //兼容栏:repeat方法,PsiClass.getAnnotation(String)
     public MixinAnnotationCompletionContributor() {
         extend(
                 CompletionType.BASIC,
@@ -37,27 +39,46 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
     private void addTemplates(PsiElement element, CompletionResultSet result, String text, int mixin) {
         PsiClass targetClass = MixinUtils.getTargetClassFromMixin(element);
         if (targetClass == null) return;
+
         for (PsiMethod method : targetClass.getAllMethods()) {
-            // 过滤 java.lang.Object 方法
+
             PsiClass declaring = method.getContainingClass();
             if (declaring != null &&
                     "java.lang.Object".equals(declaring.getQualifiedName())) {
                 continue;
             }
+
             String name = method.isConstructor() ? "<init>" : method.getName();
-            for(int Value = 0; Value < 4; Value++){
-                String typeDesc = ValueType.getDescriptionByValue(Value);
-                if (typeDesc == null) continue;
-                String Type = typeDesc.toUpperCase();
-                for (int at = 0; at < 3; at++) {
-                    String AtTypeDesc = AtType.getDescriptionByAt(at);
-                    //INVOKE
-                    collectTargets(method, result, text, AtTypeDesc, at, mixin,Value,name,Type);
+
+            for (ValueType valueType : ValueType.values()) {
+                String Type = valueType.getDescription().toUpperCase();
+
+                for (AtType atType : AtType.values()) {
+
+                    collectTargets(
+                            method,
+                            result,
+                            text,
+                            atType,
+                            mixin,
+                            valueType,
+                            name,
+                            Type
+                    );
                 }
             }
         }
     }
-    private static void collectTargets(PsiMethod injectMethod, CompletionResultSet result, String text, String at, int atValue, int mixin,int Value,String name,String Type) {
+    private static void collectTargets(
+            PsiMethod injectMethod,
+            CompletionResultSet result,
+            String text,
+            AtType atType,
+            int mixin,
+            ValueType valueType,
+            String name,
+            String Type
+    ) {
         PsiCodeBlock body = injectMethod.getBody();
         if (body == null) return;
 
@@ -72,35 +93,35 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 String mixinTarget = getMixinTarget(target);
                 if (mixinTarget == null) return;
 
-                // 被调用的方法名
                 String invokeName = target.getName();
 
                 // by 参数
-                String by = (atValue == 2) ? ", by = 0" : "";
+                String by = (atType == AtType.BY) ? ", by = 0" : "";
 
                 // 缩进补偿
                 int mixinIndent = (mixin == 1) ? 14 : 0;
 
-                // 构建 INVOKETEXT
                 String invokeText;
                 String atText;
-                if (Value == 3) {   // INVOKE
+                //repeat(" ", 26 + mixinIndent)
+                if (valueType == ValueType.INVOKE) {
                     invokeText =
-                            ",\n " + " ".repeat(26 + mixinIndent) +
+                            ",\n " + CompatibleRepeat.repeat(" ", 26 + mixinIndent) +
                                     "target = \"" + mixinTarget + "\"," +
-                                    "\n " + " ".repeat(27 + mixinIndent) +
-                                    "shift = At.Shift." + at + by +
+                                    "\n " + CompatibleRepeat.repeat(" ", 27 + mixinIndent) +
+                                    "shift = At.Shift." + atType.getDescription() + by +
                                     "))";
-                    atText=" ";
+
+                    atText = " "+atType.getDescription();
                 } else {
-                    // 非 INVOKE
                     invokeText = "))";
-                    atText=" " +at;
+                    atText = "";
                 }
 
                 result.addElement(
                         LookupElementBuilder
-                                .create(text + " " + Type + " " + name + " " + invokeName + atText)
+                                .create(text + " " + Type + " " + name + " "+ atText)
+                                .withTailText(" "+invokeName, true)
                                 .withInsertHandler((ctx, item) ->
                                         ctx.getDocument().replaceString(
                                                 ctx.getStartOffset(),
