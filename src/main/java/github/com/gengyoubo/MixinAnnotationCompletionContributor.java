@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 public class MixinAnnotationCompletionContributor extends CompletionContributor {
-    //兼容栏:repeat方法,PsiClass.getAnnotation(String)
+    //兼容栏:PsiClass.getAnnotation(String)
     public MixinAnnotationCompletionContributor() {
         extend(
                 CompletionType.BASIC,
@@ -116,6 +116,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 } else {
                     invokeText = "))";
                     atText = "";
+                    invokeName="";
                 }
 
                 result.addElement(
