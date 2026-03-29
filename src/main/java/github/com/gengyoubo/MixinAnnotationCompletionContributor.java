@@ -13,7 +13,6 @@ import org.jspecify.annotations.NonNull;
 
 public class MixinAnnotationCompletionContributor extends CompletionContributor {
     public MixinAnnotationCompletionContributor() {
-
         extend(
                 CompletionType.BASIC,
                 PlatformPatterns.psiElement().afterLeaf("@"),
@@ -46,32 +45,19 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 continue;
             }
             String name = method.isConstructor() ? "<init>" : method.getName();
-            for(int Value = 0; Value < 3; Value++){
+            for(int Value = 0; Value < 4; Value++){
                 String typeDesc = ValueType.getDescriptionByValue(Value);
                 if (typeDesc == null) continue;
                 String Type = typeDesc.toUpperCase();
-
-            result.addElement(
-                    LookupElementBuilder.create(text+" "+Type+" "+name)
-                            .withInsertHandler((ctx, item) ->
-                                    ctx.getDocument().replaceString(
-                                            ctx.getStartOffset(),
-                                            ctx.getTailOffset(),
-                                            text + "(method = \"" + name + "\",\n " +
-                                                    "at = @At(value = \""+Type+"\"))"
-                                    )
-
-                            )
-            );
-                for(int at=0;at<3;at++){
+                for (int at = 0; at < 3; at++) {
                     String AtTypeDesc = AtType.getDescriptionByAt(at);
                     //INVOKE
-                    collectTargets(method, result, text,AtTypeDesc,at,mixin);
+                    collectTargets(method, result, text, AtTypeDesc, at, mixin,Value,name,Type);
                 }
             }
         }
     }
-    private static void collectTargets(PsiMethod injectMethod, CompletionResultSet result, String text, String at, int atValue, int mixin) {
+    private static void collectTargets(PsiMethod injectMethod, CompletionResultSet result, String text, String at, int atValue, int mixin,int Value,String name,String Type) {
         PsiCodeBlock body = injectMethod.getBody();
         if (body == null) return;
 
@@ -86,33 +72,42 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 String mixinTarget = getMixinTarget(target);
                 if (mixinTarget == null) return;
 
-                // 被注入的方法名
-                String injectName = injectMethod.isConstructor()
-                        ? "<init>"
-                        : injectMethod.getName();
-
                 // 被调用的方法名
                 String invokeName = target.getName();
-                String BY;
-                if (atValue==2){
-                    BY=",by=0";
+
+                // by 参数
+                String by = (atValue == 2) ? ", by = 0" : "";
+
+                // 缩进补偿
+                int mixinIndent = (mixin == 1) ? 14 : 0;
+
+                // 构建 INVOKETEXT
+                String invokeText;
+                String atText;
+                if (Value == 3) {   // INVOKE
+                    invokeText =
+                            ",\n " + " ".repeat(26 + mixinIndent) +
+                                    "target = \"" + mixinTarget + "\"," +
+                                    "\n " + " ".repeat(27 + mixinIndent) +
+                                    "shift = At.Shift." + at + by +
+                                    "))";
+                    atText=" ";
                 } else {
-                    BY = "";
+                    // 非 INVOKE
+                    invokeText = "))";
+                    atText=" " +at;
                 }
-                int MixinValue;
-                if (mixin==1){
-                    MixinValue=13;
-                } else {
-                    MixinValue=0;
-                }
+
                 result.addElement(
-                        LookupElementBuilder.create(text+" INVOKE "+injectName+" "+invokeName+" "+at)
+                        LookupElementBuilder
+                                .create(text + " " + Type + " " + name + " " + invokeName + atText)
                                 .withInsertHandler((ctx, item) ->
                                         ctx.getDocument().replaceString(
                                                 ctx.getStartOffset(),
                                                 ctx.getTailOffset(),
-                                                text+"(method = \"" + injectName + "\", " +
-                                                        "at = @At(value = \"INVOKE\",\n "+" ".repeat(26+MixinValue)+"target = \"" + mixinTarget + "\",\n "+" ".repeat(27+MixinValue)+"shift = At.Shift."+at+BY+"))"
+                                                text + "(method = \"" + name + "\", " +
+                                                        "at = @At(value = \"" + Type + "\"" +
+                                                        invokeText
                                         )
                                 )
                 );
@@ -145,20 +140,28 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
     private static String toDescriptor(PsiType type) {
         if (type == null) return "V";
 
-        if (type.equals(PsiType.VOID)) return "V";
-        if (type.equals(PsiType.INT)) return "I";
-        if (type.equals(PsiType.BOOLEAN)) return "Z";
-        if (type.equals(PsiType.BYTE)) return "B";
-        if (type.equals(PsiType.CHAR)) return "C";
-        if (type.equals(PsiType.SHORT)) return "S";
-        if (type.equals(PsiType.LONG)) return "J";
-        if (type.equals(PsiType.FLOAT)) return "F";
-        if (type.equals(PsiType.DOUBLE)) return "D";
+        // primitive
+        if (type instanceof PsiPrimitiveType) {
+            return switch (type.getCanonicalText()) {
+                case "byte" -> "B";
+                case "char" -> "C";
+                case "double" -> "D";
+                case "float" -> "F";
+                case "int" -> "I";
+                case "long" -> "J";
+                case "short" -> "S";
+                case "boolean" -> "Z";
+                case "void" -> "V";
+                default -> "Ljava/lang/Object;";
+            };
+        }
 
+        // array
         if (type instanceof PsiArrayType array) {
             return "[" + toDescriptor(array.getComponentType());
         }
 
+        // class
         if (type instanceof PsiClassType classType) {
             PsiClass cls = classType.resolve();
             if (cls != null && cls.getQualifiedName() != null) {

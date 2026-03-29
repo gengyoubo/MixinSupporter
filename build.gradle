@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'github.com.gengyoubo'
-version = '1.0.0'
+version = '1.0.1'
 
 repositories {
     mavenCentral()
@@ -30,7 +30,7 @@ intellijPlatform {
         name = 'Mixin Supporter'
         version = '1.0.1'
         description = 'IntelliJ IDEA plugin for Mixin framework development with intelligent code completion.<br>一款用于 Mixin 框架开发的 IntelliJ IDEA 插件，支持智能代码补全。'
-        changeNotes = '1.0.1:<br>1.0.1:'
+        changeNotes = '1.0.1:The code has been optimised, the issue regarding the unnecessary configuration of `shift` for `HEAD`, `RETURN` and `TAIL` has been resolved, and the formatting has been improved.Lowered the minimum required IDEA version.<br>1.0.1:优化了代码，修复[HEAD和RETURN和TAIL的shift的配置是不必要的]问题，优化排版。拉低最低IDEA版本'
 
 
         ideaVersion {

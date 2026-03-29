@@ -3,8 +3,8 @@ package github.com.gengyoubo.Type;
 public enum ValueType {
     HEAD(0, "head"),
     RETURN(1, "return"),
-    TAIL(2, "tail");
-
+    TAIL(2, "tail"),
+    INVOKE(3,"invoke");
     private final int value;
     private final String description;
 
