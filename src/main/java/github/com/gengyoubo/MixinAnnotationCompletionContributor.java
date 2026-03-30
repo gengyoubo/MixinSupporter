@@ -12,8 +12,10 @@ import github.com.gengyoubo.Type.ValueType;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class MixinAnnotationCompletionContributor extends CompletionContributor {
-    //兼容栏:PsiClass.getAnnotation(String)
     public MixinAnnotationCompletionContributor() {
         extend(
                 CompletionType.BASIC,

@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>github.com.gengyoubo.mixincompletion</id>
     <name>Mixin Code Completion</name>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <vendor email="gengyoubo@gmail.com" url="https://github.com/gengyoubo">gengyoubo</vendor>
 
     <description>
