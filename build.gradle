@@ -64,6 +64,7 @@ tasks.named('compileJava') {
 
 tasks.named('runIde') {
     jvmArgs = ['-Xmx2048m', '--add-opens', 'java.base/java.lang=ALL-UNNAMED']
+    systemProperty "idea.auto.reload.plugins", "false"
 }
 
 tasks.withType(org.jetbrains.intellij.platform.gradle.tasks.BuildSearchableOptionsTask).configureEach {
