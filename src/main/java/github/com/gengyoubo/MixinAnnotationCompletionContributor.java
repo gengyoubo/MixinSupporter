@@ -2,20 +2,24 @@ package github.com.gengyoubo;
 
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.lookup.LookupElementBuilder;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.patterns.PlatformPatterns;
 import com.intellij.psi.*;
 import com.intellij.util.ProcessingContext;
+import github.com.gengyoubo.ASM.AsmScanner;
 import github.com.gengyoubo.ASM.AsmTargetInfo;
 import github.com.gengyoubo.Type.AtType;
 import github.com.gengyoubo.Type.MixinType;
 import github.com.gengyoubo.Type.ValueType;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class MixinAnnotationCompletionContributor extends CompletionContributor {
-    private static final Set<String> seen = new HashSet<>();
     public MixinAnnotationCompletionContributor() {
         extend(
                 CompletionType.BASIC,
@@ -40,6 +44,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
     private void addTemplates(PsiElement element, CompletionResultSet result, String text, int mixin) {
         PsiClass targetClass = MixinUtils.getTargetClassFromMixin(element);
         if (targetClass == null) return;
+        Set<String> seen = new HashSet<>();
 
         for (PsiMethod method : targetClass.getAllMethods()) {
             PsiClass declaring = method.getContainingClass();
@@ -51,7 +56,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 if (!completionConfig.isEnabled(valueType)) continue;
 
                 for (AtType atType : AtType.values()) {
-                    collectTargets(method, result, text, atType, mixin, valueType);
+                    collectTargets(method, result, text, atType, mixin, valueType, seen);
                 }
             }
         }
@@ -63,10 +68,11 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             String text,
             AtType atType,
             int mixin,
-            ValueType valueType
+            ValueType valueType,
+            Set<String> seen
     ) {
         if (!valueType.needTarget()) {
-            addSimpleCompletion(method, result, text, atType, mixin, valueType);
+            addSimpleCompletion(method, result, text, atType, mixin, valueType, seen);
             return;
         }
 
@@ -74,11 +80,11 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
         if (body != null) {
             switch (valueType) {
                 case INVOKE, INVOKE_ASSIGN, INVOKE_STRING ->
-                        scanInvoke(method, body, result, text, atType, mixin, valueType);
+                        scanInvoke(method, body, result, text, atType, mixin, valueType, seen);
                 case FIELD ->
-                        scanField(method, body, result, text, atType, mixin, valueType);
+                        scanField(method, body, result, text, atType, mixin, valueType, seen);
                 case NEW ->
-                        scanNew(method, body, result, text, atType, mixin, valueType);
+                        scanNew(method, body, result, text, atType, mixin, valueType, seen);
             }
             return;
         }
@@ -86,7 +92,7 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
         AsmTargetInfo asmInfo = loadAsmTargets(method);
         if (asmInfo == null) return;
 
-        addAsmTargets(method, result, text, atType, mixin, valueType, asmInfo);
+        addAsmTargets(method, result, text, atType, mixin, valueType, asmInfo, seen);
     }
     private static void addAsmTargets(
             PsiMethod method,
@@ -95,28 +101,29 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             AtType atType,
             int mixin,
             ValueType valueType,
-            AsmTargetInfo info
+            AsmTargetInfo info,
+            Set<String> seen
     ) {
         switch (valueType) {
             case INVOKE, INVOKE_ASSIGN, INVOKE_STRING -> {
                 for (String target : info.getInvokes()) {
-                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, target);
+                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, target, seen, null);
                 }
             }
             case FIELD -> {
                 for (String target : info.getFields()) {
-                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, target);
+                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, target, seen, null);
                 }
             }
             case NEW -> {
                 for (String target : info.getNews()) {
-                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, "new");
+                    addTargetCompletion(method, result, text, atType, mixin, valueType, target, "new", seen, null);
                 }
             }
         }
     }
-    private static String buildCompletionKey(String text, ValueType valueType, String methodName, String target) {
-        return text + "|" + valueType.name() + "|" + methodName + "|" + target;
+    private static String buildCompletionKey(String text, ValueType valueType, String methodName, String target, Integer ordinal) {
+        return text + "|" + valueType.name() + "|" + methodName + "|" + target + "|" + ordinal;
     }
     private static String getMethodName(PsiMethod method) {
         return method.isConstructor() ? "<init>" : method.getName();
@@ -134,6 +141,42 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
         return desc.toString();
     }
 
+    private static AsmTargetInfo loadAsmTargets(PsiMethod method) {
+        PsiClass owner = method.getContainingClass();
+        if (owner == null) return null;
+
+        byte[] bytes = loadClassBytes(owner);
+        if (bytes == null) return null;
+
+        return AsmScanner.scanMethod(bytes, getMethodName(method), getMethodDescriptor(method));
+    }
+
+    private static byte[] loadClassBytes(PsiClass owner) {
+        try {
+            PsiFile file = owner.getContainingFile();
+            if (file != null) {
+                VirtualFile virtualFile = file.getVirtualFile();
+                if (virtualFile != null && "class".equalsIgnoreCase(virtualFile.getExtension())) {
+                    return virtualFile.contentsToByteArray();
+                }
+            }
+
+            String qualifiedName = owner.getQualifiedName();
+            if (qualifiedName == null) return null;
+
+            String resourcePath = qualifiedName.replace('.', '/') + ".class";
+            ClassLoader loader = MixinAnnotationCompletionContributor.class.getClassLoader();
+            if (loader == null) return null;
+
+            try (InputStream is = loader.getResourceAsStream(resourcePath)) {
+                if (is == null) return null;
+                return is.readAllBytes();
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private static String getMixinTarget(PsiMethod method) {
         PsiClass owner = method.getContainingClass();
         if (owner == null) return null;
@@ -142,7 +185,30 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
         if (ownerName == null) return null;
 
         ownerName = ownerName.replace('.', '/');
-        return "L" + ownerName + ";" + getMethodName(method) + getMethodDescriptor(method);
+        return buildMethodTarget(ownerName, method);
+    }
+
+    private static String buildMethodTarget(String ownerInternalName, PsiMethod method) {
+        return "L" + ownerInternalName + ";" + getMethodName(method) + getMethodDescriptor(method);
+    }
+
+    private static String getInvokeTarget(PsiMethod resolvedMethod, PsiMethodCallExpression call) {
+        PsiReferenceExpression methodExpression = call.getMethodExpression();
+        PsiExpression qualifier = methodExpression.getQualifierExpression();
+        if (qualifier != null) {
+            PsiType qualifierType = qualifier.getType();
+            if (qualifierType instanceof PsiClassType classType) {
+                PsiClass qualifierClass = classType.resolve();
+                if (qualifierClass != null && qualifierClass.getQualifiedName() != null) {
+                    return buildMethodTarget(
+                            qualifierClass.getQualifiedName().replace('.', '/'),
+                            resolvedMethod
+                    );
+                }
+            }
+        }
+
+        return getMixinTarget(resolvedMethod);
     }
 
     private static String toDescriptor(PsiType type) {
@@ -183,14 +249,20 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             String text,
             AtType atType,
             int mixin,
-            ValueType valueType
+            ValueType valueType,
+            Set<String> seen
     ) {
         String name = getMethodName(method);
         String type = valueType.getDescription().toUpperCase();
+        String key = buildCompletionKey(text, valueType, name, "", null);
+        if (!seen.add(key)) return;
 
         result.addElement(
                 LookupElementBuilder
-                        .create(text + " " + type + " " + name)
+                        .create(key, text + " " + type + " " + name)
+                        .withPresentableText(text)
+                        .withTypeText(type, true)
+                        .withTailText(" " + name, true)
                         .withInsertHandler((ctx, item) ->
                                 ctx.getDocument().replaceString(
                                         ctx.getStartOffset(),
@@ -209,8 +281,10 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             String text,
             AtType atType,
             int mixin,
-            ValueType valueType
+            ValueType valueType,
+            Set<String> seen
     ) {
+        Map<String, Integer> ordinals = new HashMap<>();
         body.accept(new JavaRecursiveElementVisitor() {
             @Override
             public void visitMethodCallExpression(@NotNull PsiMethodCallExpression call) {
@@ -219,8 +293,10 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                 PsiMethod target = call.resolveMethod();
                 if (target == null) return;
 
-                String mixinTarget = getMixinTarget(target);
+                String mixinTarget = getInvokeTarget(target, call);
                 if (mixinTarget == null) return;
+                int ordinal = ordinals.getOrDefault(mixinTarget, 0);
+                ordinals.put(mixinTarget, ordinal + 1);
 
                 addTargetCompletion(
                         method,
@@ -230,7 +306,9 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                         mixin,
                         valueType,
                         mixinTarget,
-                        target.getName()
+                        target.getName(),
+                        seen,
+                        ordinal
                 );
             }
         });
@@ -243,7 +321,8 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             String text,
             AtType atType,
             int mixin,
-            ValueType valueType
+            ValueType valueType,
+            Set<String> seen
     ) {
         body.accept(new JavaRecursiveElementVisitor() {
             @Override
@@ -264,7 +343,9 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                         mixin,
                         valueType,
                         target,
-                        field.getName()
+                        field.getName(),
+                        seen,
+                        null
                 );
             }
         });
@@ -277,7 +358,8 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             String text,
             AtType atType,
             int mixin,
-            ValueType valueType
+            ValueType valueType,
+            Set<String> seen
     ) {
         body.accept(new JavaRecursiveElementVisitor() {
             @Override
@@ -301,7 +383,9 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
                         mixin,
                         valueType,
                         target,
-                        "new"
+                        "new",
+                        seen,
+                        null
                 );
             }
         });
@@ -315,24 +399,71 @@ public class MixinAnnotationCompletionContributor extends CompletionContributor 
             int mixin,
             ValueType valueType,
             String target,
-            String name
+            String name,
+            Set<String> seen,
+            Integer ordinal
     ) {
         String methodName = getMethodName(method);
+        String key = buildCompletionKey(text, valueType, methodName, target, ordinal);
+        if (!seen.add(key)) return;
         String type = valueType.getDescription().toUpperCase();
+        String shortTarget = shortenTarget(target, name);
+        String ordinalText = ordinal == null ? "" : " [" + ordinal + "]";
 
         result.addElement(
                 LookupElementBuilder
-                        .create(text + " " + type + " " + methodName + " " + name)
+                        .create(key, text + " " + type + " " + methodName + " " + name)
+                        .withPresentableText(text)
+                        .withTypeText(type, true)
+                        .withTailText(" " + methodName + " -> " + shortTarget + ordinalText, true)
                         .withInsertHandler((ctx, item) ->
                                 ctx.getDocument().replaceString(
                                         ctx.getStartOffset(),
                                         ctx.getTailOffset(),
                                         text + "(method = \"" + methodName +
                                                 "\", at = @At(value = \"" + type +
-                                                "\", target = \"" + target + "\"))"
+                                                "\", target = \"" + target + "\"" +
+                                                (ordinal == null ? "" : ", ordinal = " + ordinal) +
+                                                "))"
                                 )
                         )
         );
+    }
+
+    private static String shortenTarget(String target, String fallbackName) {
+        int methodSep = target.indexOf(';');
+        if (methodSep >= 0 && methodSep + 1 < target.length()) {
+            String ownerDisplay = shortenOwner(target.substring(0, methodSep + 1));
+            String tail = target.substring(methodSep + 1);
+            int descStart = tail.indexOf('(');
+            int fieldSep = tail.indexOf(':');
+
+            if (descStart >= 0) {
+                return ownerDisplay + "." + tail.substring(0, descStart) + "(...)";
+            }
+            if (fieldSep >= 0) {
+                return ownerDisplay + "." + tail.substring(0, fieldSep);
+            }
+            if (!tail.isEmpty()) {
+                return ownerDisplay + "." + tail;
+            }
+        }
+
+        if (target.startsWith("L") && target.endsWith(";")) {
+            return shortenOwner(target);
+        }
+
+        return fallbackName;
+    }
+
+    private static String shortenOwner(String ownerTarget) {
+        if (!ownerTarget.startsWith("L") || !ownerTarget.endsWith(";")) {
+            return ownerTarget;
+        }
+
+        String internalName = ownerTarget.substring(1, ownerTarget.length() - 1);
+        int slash = internalName.lastIndexOf('/');
+        return slash >= 0 ? internalName.substring(slash + 1) : internalName;
     }
 
     private static String getFieldTarget(PsiField field) {

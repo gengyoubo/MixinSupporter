@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'github.com.gengyoubo'
-version = '1.0.2'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -28,9 +28,9 @@ intellijPlatform {
     pluginConfiguration() {
         id = 'github.com.gengyoubo.mixin-supporter'
         name = 'Mixin Supporter'
-        version = '1.0.2'
+        version = '1.1.0'
         description = 'IntelliJ IDEA plugin for Mixin framework development with intelligent code completion.<br>一款用于 Mixin 框架开发的 IntelliJ IDEA 插件，支持智能代码补全。'
-        changeNotes = '1.0.2:Further optimise the layout by omitting unnecessary text. Add compatibility<br>1.0.2:再次优化排版，把不需要的文字给省略。添加兼容'
+        changeNotes = '1.1.0:Fixed issues #1 and #2. Added new fields<br>1.1.0:修复#1,#2问题。添加新的字段'
 
 
         ideaVersion {
